@@ -1,12 +1,13 @@
 import os
 import time
-#from turtle import color, done
 import cv2
 import random as rnd
 import tkinter as tk
 from tkinter import simpledialog, messagebox
+import csv 
 
 rgb, coordinates, fish = [],[],[]
+header = ['rgb', 'coordinates (xy)', 'species']
 options = ["cod", "haddock", "pollock", "whitting"]
 # https://stackoverflow.com/questions/49799057/how-to-draw-a-point-in-an-image-using-given-co-ordinate-with-python-opencv
 # https://chercher.tech/opencv/drawing-mouse-images-opencv
@@ -18,7 +19,7 @@ def scan_for_new_files(path):
         files = os.listdir(path)
         #print(files)
         if len(files) != 0:
-            break;
+            break
         else:
             print("No new image")
             time.sleep(1.0)
@@ -45,7 +46,7 @@ def get_species():
     # the input dialog
     species = None
     while species not in options:
-        species = tk.simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
+        species = simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
     return species
 
 def draw_point(event, x, y, flags, param):
@@ -66,7 +67,7 @@ def confirm(img):
         cv2.imshow("confirmation window", img)
         cv2.waitKey()
         #correct = input("Is this correct? Y/N \n")
-        correct = tk.messagebox.askyesno(" ", "Is this correct annotation?")
+        correct = messagebox.askyesno(" ", "Is this correct annotation?")
         if correct == True:
             cv2.destroyAllWindows()
             return True
@@ -84,6 +85,13 @@ def confirm(img):
         else:
             continue
         """
+
+def save_annotations(path):
+    with open('student.csv', 'w') as f: 
+        write = csv.writer(f) 
+        write.writerow(Details) 
+        write.writerows(rows) 
+
 
 if __name__=="__main__":
     image_folder = "/home/daniel/annotation_tool/image_folder"
@@ -109,9 +117,15 @@ if __name__=="__main__":
 
         correct = confirm(annotated_img)
         if correct == True:
-            os.rename(img_path, img_output_path)
+            #os.rename(img_path, img_output_path)
+            save_annotations()
+            exit(8)
             continue
         else:
+            #RESET ANNOTATION 
+            rgb.clear()
+            coordinates.clear()
+            fish.clear()
             continue
             #exit(5)
 
