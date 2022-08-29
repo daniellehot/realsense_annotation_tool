@@ -7,11 +7,12 @@ from tkinter import simpledialog, messagebox
 import csv 
 
 rgb, coordinates, fish = [],[],[]
-header = ['rgb', 'coordinates (xy)', 'species']
+header = ['species', 'x', 'y', 'r', 'g', 'b']
 options = ["cod", "haddock", "pollock", "whitting"]
 # https://stackoverflow.com/questions/49799057/how-to-draw-a-point-in-an-image-using-given-co-ordinate-with-python-opencv
 # https://chercher.tech/opencv/drawing-mouse-images-opencv
 # https://mlhive.com/2022/04/draw-on-images-using-mouse-in-opencv-python
+
 
 def scan_for_new_files(path):
     files = []
@@ -26,37 +27,27 @@ def scan_for_new_files(path):
     image_path = os.path.join(path, files[0])
     return image_path, files[0]
 
-""""
-def get_species_v2():
-    root = tk.Tk()
-    root.geometry("500x250")
-    menu= tk.StringVar()
-    menu.set("Select Fish Species")
-    drop= tk.OptionMenu(root, menu,"cod", "haddock", "pollock", "whitting")
-    drop.pack()
-    root.update_idletasks()
-    root.update()
-    species = "temp"
-    return species
-"""
 
 def get_species():
     root = tk.Tk()
     root.withdraw()    
     # the input dialog
     species = None
-    while species not in options:
-        species = simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
+    #while species not in options:
+    species = simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
+    #print(species)
     return species
 
 def draw_point(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         coordinate = (x,y)
         colour = (rnd.randint(0,255), rnd.randint(0,255), rnd.randint(0,255))
-        cv2.circle(img, coordinate, 10, colour, -1)
-        rgb.append(colour)
-        coordinates.append(coordinate)
-        fish.append(get_species())
+        species = get_species()
+        if species != None and species in options:
+            cv2.circle(img, coordinate, 10, colour, -1)
+            rgb.append(colour)
+            coordinates.append(coordinate)
+            fish.append(species)
 
 def confirm(img):
     for (colour, coordinate, species) in zip(rgb, coordinates, fish):
@@ -86,21 +77,27 @@ def confirm(img):
             continue
         """
 
-def save_annotations(path):
-    with open('student.csv', 'w') as f: 
-        write = csv.writer(f) 
-        write.writerow(Details) 
-        write.writerows(rows) 
+def save_annotations(path, data):
+    path = path + ".csv"
+    if os.path.exists(path):
+        os.remove(path) 
+
+    with open(path, 'a') as f: 
+        writer = csv.writer(f) 
+        writer.writerow(header)
+        for annotation in data:
+            writer.writerow(annotation) 
 
 
 if __name__=="__main__":
-    image_folder = "/home/daniel/annotation_tool/image_folder"
-    image_output_folder = "/home/daniel/annotation_tool/dataset_folder/img"
-    annotation_output_folder = "/home/daniel/annotation_tool/dataset_folder/gt"
+    image_folder = "image_folder"
+    image_output_folder = "dataset_folder/img"
+    annotation_output_folder = "dataset_folder/gt"
 
     while 1:
         img_path, img_file = scan_for_new_files(image_folder)
         img_output_path = os.path.join(image_output_folder, img_file)
+        annotation_file = os.path.join(annotation_output_folder, img_file[:-4])
 
         img = cv2.imread(img_path)
         annotated_img = cv2.imread(img_path)
@@ -118,7 +115,14 @@ if __name__=="__main__":
         correct = confirm(annotated_img)
         if correct == True:
             #os.rename(img_path, img_output_path)
-            save_annotations()
+            data_formated = []
+            for (species, xy, colour) in zip(fish, coordinates, rgb):
+                data_formated.append([species, xy[0],xy[1],colour[0],colour[1],colour[2]])
+            print(data_formated)
+            save_annotations(annotation_file, data_formated)
+            print(rgb)
+            print(coordinates)
+            print(fish)
             exit(8)
             continue
         else:
