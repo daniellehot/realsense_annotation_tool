@@ -8,7 +8,8 @@ import csv
 
 rgb, coordinates, fish = [],[],[]
 header = ['species', 'x', 'y', 'r', 'g', 'b']
-options = ["cod", "haddock", "pollock", "whitting"]
+options = ["cod", "haddock", "pollock", "whitting", "cancel"]
+remove_annotations = False
 # https://stackoverflow.com/questions/49799057/how-to-draw-a-point-in-an-image-using-given-co-ordinate-with-python-opencv
 # https://chercher.tech/opencv/drawing-mouse-images-opencv
 # https://mlhive.com/2022/04/draw-on-images-using-mouse-in-opencv-python
@@ -33,25 +34,49 @@ def get_species():
     root.withdraw()    
     # the input dialog
     species = None
-    #while species not in options:
-    species = simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
-    #print(species)
+    while species not in options:
+        species = simpledialog.askstring(title="Annotate fish species", prompt="Fish species: ")
+        if species == None:
+            species = "cancel"
+            print(species)
     return species
+
 
 def draw_point(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         coordinate = (x,y)
         colour = (rnd.randint(0,255), rnd.randint(0,255), rnd.randint(0,255))
         species = get_species()
-        if species != None and species in options:
-            cv2.circle(img, coordinate, 10, colour, -1)
+        if species != "cancel":
+            cv2.circle(img, coordinate, 5, colour, -1)
+            cv2.putText(img, species, (coordinate[0]+5, coordinate[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
             rgb.append(colour)
             coordinates.append(coordinate)
             fish.append(species)
 
+
+def remove_point(event, x, y, flags, param):    
+    #print("len before removal ", len(coordinates))
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print("remove point callback")
+        for coordinate in coordinates:
+            sum = abs(x-coordinate[0] + y-coordinate[1])
+            if sum < 10:
+                idx = coordinates.index(coordinate)
+                cv2.drawMarker(img, coordinates[idx], rgb[idx], cv2.MARKER_TILTED_CROSS, 50, 2)
+                coordinates.pop(idx)
+                fish.pop(idx)
+                rgb.pop(idx)
+                break
+
+        #print("len after removal ", len(coordinates))                
+                
+
+
 def confirm(img):
     for (colour, coordinate, species) in zip(rgb, coordinates, fish):
-        img = cv2.putText(img, species, coordinate, cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
+        img = cv2.circle(img, coordinate, 5, colour, -1)
+        img = cv2.putText(img, species, (coordinate[0]+5, coordinate[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
     cv2.namedWindow("confirmation window")
 
     while 1:
@@ -65,7 +90,6 @@ def confirm(img):
         elif correct == False:
             cv2.destroyAllWindows()
             return False
-
         """
         if correct == 'Y' or correct == 'y':
             cv2.destroyAllWindows()
@@ -76,6 +100,7 @@ def confirm(img):
         else:
             continue
         """
+
 
 def save_annotations(path, data):
     path = path + ".csv"
@@ -103,12 +128,29 @@ if __name__=="__main__":
         annotated_img = cv2.imread(img_path)
         
         cv2.namedWindow("annotation window")
-        cv2.setMouseCallback("annotation window", draw_point)
-
+        #cv2.setMouseCallback("annotation window", draw_point)
+        """
         while 1:
             cv2.imshow("annotation window", img)
             if cv2.waitKey(20) & 0xFF == 27:
                 break
+        cv2.destroyAllWindows()
+        """
+        while 1:
+            if remove_annotations:
+                cv2.setMouseCallback("annotation window", remove_point)
+            else:
+                cv2.setMouseCallback("annotation window", draw_point)
+                    
+            cv2.imshow("annotation window", img)
+
+            k = cv2.waitKey(20) & 0xFF
+            if k == 27:
+                break
+            if k == ord('m'):
+                remove_annotations = not remove_annotations
+                #print(remove_annotations)
+    
         cv2.destroyAllWindows()
 
 
