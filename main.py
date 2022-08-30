@@ -1,15 +1,21 @@
+import utils
 import os
 import time
 import cv2
 import random as rnd
+import  numpy as np
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import csv 
+import multiprocessing
+from threading import Thread
+from pymsgbox import *
+
+
 
 rgb, coordinates, fish = [],[],[]
 header = ['species', 'x', 'y', 'r', 'g', 'b']
 options = ["cod", "haddock", "pollock", "whitting", "cancel"]
-remove_annotations = False
 # https://stackoverflow.com/questions/49799057/how-to-draw-a-point-in-an-image-using-given-co-ordinate-with-python-opencv
 # https://chercher.tech/opencv/drawing-mouse-images-opencv
 # https://mlhive.com/2022/04/draw-on-images-using-mouse-in-opencv-python
@@ -28,7 +34,7 @@ def scan_for_new_files(path):
     image_path = os.path.join(path, files[0])
     return image_path, files[0]
 
-
+# replace with prompt
 def get_species():
     root = tk.Tk()
     root.withdraw()    
@@ -72,7 +78,6 @@ def remove_point(event, x, y, flags, param):
         #print("len after removal ", len(coordinates))                
                 
 
-
 def confirm(img):
     for (colour, coordinate, species) in zip(rgb, coordinates, fish):
         img = cv2.circle(img, coordinate, 5, colour, -1)
@@ -113,13 +118,23 @@ def save_annotations(path, data):
         for annotation in data:
             writer.writerow(annotation) 
 
+def annotating_window():
+    alert(text='annotating', title='annotating', button='ok')
+
+def correcting_window():
+    alert(text='correcting', title='correcting', button='ok')
+
 
 if __name__=="__main__":
     image_folder = "image_folder"
     image_output_folder = "dataset_folder/img"
     annotation_output_folder = "dataset_folder/gt"
+    process_annotation = multiprocessing.Process(target=annotating_window)
+    process_annotation.start()
 
     while 1:
+        mode = "annotating"
+
         img_path, img_file = scan_for_new_files(image_folder)
         img_output_path = os.path.join(image_output_folder, img_file)
         annotation_file = os.path.join(annotation_output_folder, img_file[:-4])
@@ -128,19 +143,21 @@ if __name__=="__main__":
         annotated_img = cv2.imread(img_path)
         
         cv2.namedWindow("annotation window")
-        #cv2.setMouseCallback("annotation window", draw_point)
-        """
+        cv2.setMouseCallback("annotation window", draw_point)
+        
         while 1:
-            cv2.imshow("annotation window", img)
-            if cv2.waitKey(20) & 0xFF == 27:
-                break
-        cv2.destroyAllWindows()
-        """
-        while 1:
+            """
             if remove_annotations:
                 cv2.setMouseCallback("annotation window", remove_point)
+                #process.terminate()
+                #process = multiprocessing.Process(target=show_mode, args=(remove_annotations,))
+                #process.start()
             else:
                 cv2.setMouseCallback("annotation window", draw_point)
+                #process.terminate()
+                #process = multiprocessing.Process(target=show_mode, args=(remove_annotations,))
+                #process.start()
+            """
                     
             cv2.imshow("annotation window", img)
 
@@ -148,9 +165,20 @@ if __name__=="__main__":
             if k == 27:
                 break
             if k == ord('m'):
-                remove_annotations = not remove_annotations
-                #print(remove_annotations)
-    
+                if mode == "annotating":
+                    mode = "correcting"
+                    process_annotation.terminate()
+                    process_correction = multiprocessing.Process(target=correcting_window)
+                    process_correction.start()
+                    cv2.setMouseCallback("annotation window", remove_point)
+                else:
+
+                    mode = "annotating"
+                    process_correction.terminate()
+                    process_annotation = multiprocessing.Process(target=annotating_window)
+                    process_annotation.start()
+                    cv2.setMouseCallback("annotation window", draw_point)
+                    
         cv2.destroyAllWindows()
 
 
@@ -165,6 +193,9 @@ if __name__=="__main__":
             print(rgb)
             print(coordinates)
             print(fish)
+            rgb.clear()
+            coordinates.clear()
+            fish.clear()
             exit(8)
             continue
         else:
@@ -174,8 +205,3 @@ if __name__=="__main__":
             fish.clear()
             continue
             #exit(5)
-
-
-    
-    
-    
