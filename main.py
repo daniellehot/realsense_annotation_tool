@@ -24,6 +24,7 @@ def scan_for_new_files(path):
     files = []
     while 1:
         files = os.listdir(path)
+        files.remove(".gitkeep")
         if len(files) != 0:
             break
         else:
@@ -48,7 +49,8 @@ def draw_point(event, x, y, flags, param):
     global img
     if event == cv2.EVENT_LBUTTONDOWN:
         coordinate = (x,y)
-        colour = (rnd.randint(0,255), rnd.randint(0,255), rnd.randint(0,255))
+        #colour = (rnd.randint(0,255), rnd.randint(0,255), rnd.randint(0,255))
+        colour = (0, 0, 255)
         species = get_species()
         if species != "cancel":
             img = cv2.circle(img, coordinate, 5, colour, -1)
@@ -117,6 +119,7 @@ def confirm_annotation(img):
             cv2.destroyAllWindows()
             return False
 
+"""
 def re_annotate(clean_img, mode):
     global img
     img = clean_img
@@ -144,7 +147,7 @@ def re_annotate(clean_img, mode):
     
     cv2.destroyAllWindows()
     return annotated_img
-
+"""
 
 def save_annotations(path, data):
     path = path + ".csv"
