@@ -18,7 +18,8 @@ FOLDER_PATH = "data/new/"
 FILE = None
 
 rgb, coordinates, fish, IDs = [], [], [], []
-header = ['species', 'id', 'x', 'y', 'r', 'g', 'b']
+#header = ['species', 'id', 'x', 'y', 'r', 'g', 'b']
+header = ['species', 'id', 'x', 'y']
 options = ["cod", "haddock", "pollock", "whitting", "cancel"] 
 img = None
 
@@ -27,11 +28,11 @@ def scan_for_new_files(path):
     while 1:
         print("Scanning")
         for filename in os.listdir(path):
-            print(filename)
             if filename.endswith(".png"):
-                FILE = filename
+                print(filename)
+                FILE = filename - ".png"
                 break
-        break
+            break
             
                 
         """
@@ -54,8 +55,8 @@ def get_species():
         species = simpledialog.askstring(title = "Annotate fish species", prompt="Fish species: ")
         if species == None:
             species = "cancel"
-        else:
-            id = simpledialog.askstring(title = "Annotate fish ID", prompt="ID: ")
+    if species != "cancel":
+        id = simpledialog.askstring(title = "Annotate fish ID", prompt="ID: ")
     return species, id
 
 
@@ -66,7 +67,7 @@ def draw_point(event, x, y, flags, param):
         #colour = (rnd.randint(0,255), rnd.randint(0,255), rnd.randint(0,255))
         colour = (0, 0, 255)
         species, id = get_species()
-        annotation = id + " " + species
+        annotation = id + species
         if species != "cancel":
             img = cv2.circle(img, coordinate, 5, colour, -1)
             img = cv2.putText(img, annotation, (coordinate[0]+5, coordinate[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
@@ -118,9 +119,10 @@ def annotate(img_path, mode):
     
 
 def confirm_annotation(img):
-    for (colour, coordinate, species) in zip(rgb, coordinates, fish):
+    for (colour, coordinate, species, id) in zip(rgb, coordinates, fish, IDs):
         img = cv2.circle(img, coordinate, 5, colour, -1)
-        img = cv2.putText(img, species, (coordinate[0]+5, coordinate[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
+        annotation = id + species
+        img = cv2.putText(img, annotation, (coordinate[0]+5, coordinate[1]+5), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2, cv2.LINE_AA, False)
     cv2.namedWindow("confirmation window")
 
     while 1:
@@ -180,6 +182,7 @@ def reset():
     rgb.clear()
     coordinates.clear()
     fish.clear()
+    IDs.clear()
     global img
     img = None
 
@@ -189,16 +192,16 @@ if __name__=="__main__":
         scan_for_new_files(FOLDER_PATH)
         #img_output_path = os.path.join(image_output_folder, img_file)
         #annotation_file = os.path.join(annotation_output_folder, img_file[:-4])
-        img_path = FOLDER_PATH + FILE
+        annotation_file = FOLDER_PATH + FILE + ".csv"
+        img_path = FOLDER_PATH + FILE + ".png"
         mode = "annotating"
         print("temp 2")
         annotated_img = annotate(img_path, mode)
 
         if confirm_annotation(annotated_img):
-            os.rename(img_path, img_output_path)
             data_formated = []
-            for (species, xy, colour) in zip(fish, coordinates, rgb):
-                data_formated.append([species, xy[0],xy[1],colour[0],colour[1],colour[2]])
+            for (species, id, xy) in zip(fish, IDs, coordinates):
+                data_formated.append([species, id, xy[0],xy[1]])
             save_annotations(annotation_file, data_formated)
             reset()
         else:
