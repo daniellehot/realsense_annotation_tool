@@ -1,7 +1,7 @@
 import os
 import time
 import cv2
-import random as rnd
+#import random as rnd
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import csv 
@@ -15,7 +15,7 @@ from pymsgbox import *
 
 # GLOBAL VARIABLES
 FOLDER_PATH = "data/new/"
-FILE = None
+#FILE = None
 
 rgb, coordinates, fish, IDs = [], [], [], []
 #header = ['species', 'id', 'x', 'y', 'r', 'g', 'b']
@@ -23,29 +23,12 @@ header = ['species', 'id', 'x', 'y']
 options = ["cod", "haddock", "pollock", "whitting", "cancel"] 
 img = None
 
-def scan_for_new_files(path):
-    global FILE
-    while 1:
-        print("Scanning")
-        for filename in os.listdir(path):
-            if filename.endswith(".png"):
-                print(filename)
-                FILE = filename - ".png"
-                break
-            break
-            
-                
-        """
-        files = os.listdir(path)
-        if len(files) != 0:
-            break
-        else:
-            print("No new image")
-            time.sleep(1.0)
-    image_path = os.path.join(path, files[0])
-    return image_path, files[0]
-    """
 
+def scan_for_new_files(path):
+    for filename in os.listdir(path):
+        if filename.endswith(".png"):
+            return filename.replace(".png", "")
+            
 
 def get_species():
     root = tk.Tk()
@@ -88,6 +71,7 @@ def remove_point(event, x, y, flags, param):
                 coordinates.pop(idx)
                 fish.pop(idx)
                 rgb.pop(idx)
+                IDs.pop(idx)
                 break
 
 
@@ -168,9 +152,9 @@ def re_annotate(clean_img, mode):
 """
 
 def save_annotations(path, data):
-    path = path + ".csv"
-    if os.path.exists(path):
-        os.remove(path)
+    #path = path + ".csv"
+    #if os.path.exists(path):
+    #    os.remove(path)
     with open(path, 'a') as f: 
         writer = csv.writer(f) 
         writer.writerow(header)
@@ -188,22 +172,28 @@ def reset():
 
 
 if __name__=="__main__":
+    previous_file = None
     while 1:
-        scan_for_new_files(FOLDER_PATH)
-        #img_output_path = os.path.join(image_output_folder, img_file)
-        #annotation_file = os.path.join(annotation_output_folder, img_file[:-4])
-        annotation_file = FOLDER_PATH + FILE + ".csv"
-        img_path = FOLDER_PATH + FILE + ".png"
-        mode = "annotating"
-        print("temp 2")
-        annotated_img = annotate(img_path, mode)
+        file = scan_for_new_files(FOLDER_PATH)
+        if file != None and previous_file != file:
+            #img_output_path = os.path.join(image_output_folder, img_file)
+            #annotation_file = os.path.join(annotation_output_folder, img_file[:-4])
+            annotation_file = FOLDER_PATH + file + ".csv"
+            img_path = FOLDER_PATH + file + ".png"
+            mode = "annotating"
+            print("temp 2")
+            annotated_img = annotate(img_path, mode)
 
-        if confirm_annotation(annotated_img):
-            data_formated = []
-            for (species, id, xy) in zip(fish, IDs, coordinates):
-                data_formated.append([species, id, xy[0],xy[1]])
-            save_annotations(annotation_file, data_formated)
-            reset()
+            if confirm_annotation(annotated_img):
+                data_formated = []
+                for (species, id, xy) in zip(fish, IDs, coordinates):
+                    data_formated.append([species, id, xy[0],xy[1]])
+                save_annotations(annotation_file, data_formated)
+                previous_file = file
+                reset()
+            else:
+                reset()
         else:
-            reset()
+            time.sleep(2)
+            continue
 
