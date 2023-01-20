@@ -12,8 +12,8 @@ DEPTH_FORMAT = rs.format.z16
 FPS = 30
 
 
-IMG_PATH = "data/images/00001.png"
-DEPTH_PATH = "data/depth/00001.npy"
+IMG_PATH = "data/images/00003.png"
+DEPTH_PATH = "data/depth/00003.npy"
 
 def convert_depth_to_coord(x, y, depth, intrinsics):
     depth /= 1000
@@ -39,26 +39,27 @@ def setup_realsense_pipeline():
 
     depth_sensor = cfg.get_device().first_depth_sensor()
     depth_scale = depth_sensor.get_depth_scale()
-    print(depth_scale)
-    exit(5)
+    print("depth scale", depth_scale)
     return pipeline, align, color_intrinsics, depth_intrinsics
 
 
 if __name__=="__main__":
-    _, _, color_intrinsics, depth_intrinsics = setup_realsense_pipeline()
-    #print(color_intrinsics)
+    pipeline, align, color_intrinsics, depth_intrinsics = setup_realsense_pipeline()
+    print(color_intrinsics)
     #print(depth_intrinsics)
     img = cv.imread(IMG_PATH)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     #print(img.shape)
-    depth = np.load(DEPTH_PATH)
-    
-    pc = rs.pointcloud()
-    points = rs.points()
-    points = pc.calculate(depth)
-    
+    #depth = np.load(DEPTH_PATH)
+    #depth_fixed = depth.astype(float)
 
-    exit(6)
+    frames = pipeline.wait_for_frames()
+    aligned_frames = align.process(frames)
+    color_frame = aligned_frames.get_color_frame()
+    depth_frame = aligned_frames.get_depth_frame()
+
+    depth = np.asanyarray(depth_frame.get_data(), dtype=float)
+
     #print(depth.shape)
     pointcloud_size = depth.shape[0]*depth.shape[1]
     rgb_pc = np.zeros((pointcloud_size, 6))

@@ -4,6 +4,8 @@
 #TODO https://github.com/IntelRealSense/librealsense/blob/master/wrappers/python/examples/opencv_pointcloud_viewer.py
 #TODO https://github.com/IntelRealSense/realsense-ros/issues/41 
 
+#http://docs.ros.org/en/kinetic/api/librealsense2/html/rs-pcl-color_8cpp_source.html
+
 import cv2
 import os
 import pyrealsense2 as rs
@@ -12,8 +14,8 @@ import csv
 import numpy as np
 
 
-COLOR_WIDTH = 1280 #1920
-COLOR_HEIGHT = 720 #1080
+COLOR_WIDTH = 1920 #1280 
+COLOR_HEIGHT = 1080 #720 
 COLOR_FORMAT = rs.format.bgr8
 DEPTH_WIDTH = 1280
 DEPTH_HEIGHT = 720
@@ -101,6 +103,8 @@ def save_depth(map):
     filename = get_filename(DEPTH_PATH)
     depth_path = "data/new/" + filename + ".npy"
     np.save(depth_path, map)
+    #depth_path = "data/new/" + filename + ".csv"
+    #np.savetxt(depth_path, map, delimiter = ',')
     print("Depth map saved")
 
 
@@ -127,8 +131,9 @@ def save_pointcloud(depth_frame, color_frame):
 
 
 def show_img(img):
+    scaled_img = cv2.resize(img, (1280, 720))
     cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-    cv2.imshow('RealSense', img)
+    cv2.imshow('RealSense', scaled_img)
     cv2.waitKey(1)
 
 

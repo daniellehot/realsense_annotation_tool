@@ -23,6 +23,9 @@ header = ['species', 'id', 'x', 'y']
 options = ["cod", "haddock", "pollock", "whitting", "cancel"] 
 img = None
 
+SCALE_WIDTH = 1920/1280
+SCALE_HEIGHT = 1080/720
+
 
 def scan_for_new_files(path):
     for filename in os.listdir(path):
@@ -78,6 +81,7 @@ def remove_point(event, x, y, flags, param):
 def annotate(img_path, mode):
     global img
     img = cv2.imread(img_path)
+    img = cv2.resize(img, (1280, 720))
     annotated_img = cv2.imread(img_path)
     
     cv2.namedWindow("annotation window")
@@ -103,6 +107,7 @@ def annotate(img_path, mode):
     
 
 def confirm_annotation(img):
+    img = cv2.resize(img, (1280, 720))
     for (colour, coordinate, species, id) in zip(rgb, coordinates, fish, IDs):
         img = cv2.circle(img, coordinate, 5, colour, -1)
         annotation = id + species
@@ -181,13 +186,12 @@ if __name__=="__main__":
             annotation_file = FOLDER_PATH + file + ".csv"
             img_path = FOLDER_PATH + file + ".png"
             mode = "annotating"
-            print("temp 2")
             annotated_img = annotate(img_path, mode)
 
             if confirm_annotation(annotated_img):
                 data_formated = []
                 for (species, id, xy) in zip(fish, IDs, coordinates):
-                    data_formated.append([species, id, xy[0],xy[1]])
+                    data_formated.append([species, id, int(xy[0]*SCALE_WIDTH), int(xy[1]*SCALE_HEIGHT) ])
                 save_annotations(annotation_file, data_formated)
                 previous_file = file
                 reset()
