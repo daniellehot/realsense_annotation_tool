@@ -59,7 +59,8 @@ if __name__=="__main__":
     color_rs = aligned_frames.get_color_frame()
     color_img = np.asarray(color_rs.get_data())
     color_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
-
+    point= (500, 500)
+ 
     decimation_f = rs.decimation_filter()
     threshold_f = rs.threshold_filter(DEPTH_MIN, DEPTH_MAX)
     spatial_f = rs.spatial_filter()
@@ -75,7 +76,17 @@ if __name__=="__main__":
         depth_rs = temporal_f.process(depth_rs)
         depth_rs = disparity_to_depth.process(depth_rs)
     
-    #depth_map = np.asarray(depth_rs.get_data())
+    depth_map = np.asarray(depth_rs.get_data())
+    depth = depth_map[500, 500]
+    color_intrinsics = pipeline_cfg.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+    print(color_intrinsics)
+    deprojected_pixel = rs.rs2_deproject_pixel_to_point(color_intrinsics, [500, 500], depth)
+    print(deprojected_pixel)
+    new_point = np.asarray(deprojected_pixel)
+    np.append(new_point, [0, 0, 1])
+    print(new_point)
+
+
     pc_rs = rs.pointcloud()
     points_rs = rs.points()
     pc_rs.map_to(color_rs)
@@ -107,5 +118,7 @@ if __name__=="__main__":
     #Insert colors to the point cloud
     pcd.colors = o3d.utility.Vector3dVector(pc_colors)
     o3d.io.write_point_cloud("test_RGB.ply", pcd)
+
+    pcd.points.extend(new_point)
     o3d.visualization.draw_geometries([pcd])
 
