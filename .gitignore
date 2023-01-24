@@ -128,9 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+#Custom
 *.jpg 
 *.csv
 *.jpeg
-
-#Custom
+*.npy
+*.png
+*.ply
 code/data/*

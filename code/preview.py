@@ -99,6 +99,7 @@ def save_img(img):
     cv2.imwrite(img_path, img)
     print("Image saved")
 
+
 def save_depth(map):
     filename = get_filename(DEPTH_PATH)
     depth_path = "data/new/" + filename + ".npy"
