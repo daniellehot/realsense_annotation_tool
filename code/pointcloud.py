@@ -25,6 +25,45 @@ def normalize(x):
     return x.astype(float)/255
 
 
+def deproject_pixel_to_point(pixel_row, pixel_col, depth, intrinsics):
+    print(intrinsics)
+    print(pixel_row)
+    print(pixel_col)
+    print(depth)
+    point = [0, 0, 0]
+    #points = np.zeros((15, 3)).astype(np.float16)
+    cx = intrinsics.ppx
+    cy = intrinsics.ppy
+    fx = intrinsics.fx
+    fy = intrinsics.fy
+    point[0] = ((pixel_col - cx) * depth)/fx
+    point[1] = ((pixel_row - cy) * depth)/fy
+    point[2] = depth 
+    point = np.asarray(point).astype(np.float16)
+    return point.T
+
+def deproject_pixel_to_point_rs(pixel_row, pixel_col, depth, intrinsics):
+    point = rs.rs2_deproject_pixel_to_point(intrinsics, [pixel_col, pixel_row], depth)
+    point = np.asarray(point).T
+    return point
+
+
+def visualise_annotations(img, annotations):
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    coordinate = (annotations[:,0], annotations[:,1])
+    color = (0, 0, 255)
+    img = cv2.circle(img, coordinate, 5, color, -1)
+    return img
+
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    print(np.abs(array - value).argmin())
+    print(np.abs(array - value).argmin())
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
+
+
 if __name__=="__main__":
     pipeline = rs.pipeline()
     config = rs.config()
@@ -59,7 +98,7 @@ if __name__=="__main__":
     color_rs = aligned_frames.get_color_frame()
     color_img = np.asarray(color_rs.get_data())
     color_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
-    point= (500, 500)
+
  
     decimation_f = rs.decimation_filter()
     threshold_f = rs.threshold_filter(DEPTH_MIN, DEPTH_MAX)
@@ -76,16 +115,33 @@ if __name__=="__main__":
         depth_rs = temporal_f.process(depth_rs)
         depth_rs = disparity_to_depth.process(depth_rs)
     
-    depth_map = np.asarray(depth_rs.get_data())
-    depth = depth_map[500, 500]
+    depth_map = np.asanyarray(depth_rs.get_data())
+    depth_scale_after_decimation = (depth_map.shape[0]/COLOR_HEIGHT, depth_map.shape[1]/COLOR_WIDTH)
+    #print(depth_scale_after_decimation)
+    random_annotations = (np.random.rand(15, 2)*(COLOR_HEIGHT, COLOR_WIDTH)*depth_scale_after_decimation).astype(np.uint32)
+    #print(random_annotations)
+    depth_scale = pipeline_cfg.get_device().first_depth_sensor().get_depth_scale()
+    random_depth = depth_map[random_annotations[:, 0], random_annotations[:, 1]] * depth_scale
+    print(random_depth)
+   
+    #print(random_depth)
     color_intrinsics = pipeline_cfg.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
-    print(color_intrinsics)
-    deprojected_pixel = rs.rs2_deproject_pixel_to_point(color_intrinsics, [500, 500], depth)
-    print(deprojected_pixel)
-    new_point = np.asarray(deprojected_pixel)
-    np.append(new_point, [0, 0, 1])
-    print(new_point)
+    #deprojected_point = deproject_pixel_to_point(pixel_col=800, pixel_row=630, depth=0.65315, intrinsics=color_intrinsics)
+    #print(deprojected_point)
+    #deprojected_point = deproject_pixel_to_point_rs(pixel_col=800, pixel_row=630, depth=0.65315, intrinsics=color_intrinsics)
+    #print(deprojected_point)
 
+    #print(random_annotations[:, 0])
+    #print(random_annotations[:, 1])
+    #exit(5)
+    annotations_points = deproject_pixel_to_point(pixel_row=random_annotations[:, 0], pixel_col=random_annotations[:,1], depth=random_depth, intrinsics=color_intrinsics)
+    #print(annotations_points)
+    annotations_points = annotations_points[ annotations_points[:, 2] > 0]
+    #print(annotations_points)
+    annotations_colors = np.ones((15,3))*(1, 0, 0)
+    annotations_pc = o3d.geometry.PointCloud()
+    annotations_pc.points = o3d.utility.Vector3dVector(annotations_points)
+    annotations_pc.colors = o3d.utility.Vector3dVector(annotations_colors) 
 
     pc_rs = rs.pointcloud()
     points_rs = rs.points()
@@ -106,8 +162,10 @@ if __name__=="__main__":
     #SOURCE - http://docs.ros.org/en/kinetic/api/librealsense2/html/opencv__pointcloud__viewer_8py_source.html L255-258
     #SOURCE - https://github.com/IntelRealSense/librealsense/blob/master/wrappers/pcl/pcl-color/rs-pcl-color.cpp L66
     u = (tex_coords[:, 0] * COLOR_WIDTH + 0.5).astype(np.uint32)
+    #u = (tex_coords[:, 0] * COLOR_WIDTH).astype(np.uint32)
     np.clip(u, 0, COLOR_WIDTH-1, out=u)
     v = (tex_coords[:, 1] * COLOR_HEIGHT + 0.5).astype(np.uint32)
+    #v = (tex_coords[:, 1] * COLOR_HEIGHT).astype(np.uint32)
     np.clip(v, 0, COLOR_HEIGHT-1, out=v)
 
     #Read normalized colors from the color source, in this image color image
@@ -118,7 +176,6 @@ if __name__=="__main__":
     #Insert colors to the point cloud
     pcd.colors = o3d.utility.Vector3dVector(pc_colors)
     o3d.io.write_point_cloud("test_RGB.ply", pcd)
+    o3d.visualization.draw_geometries([pcd, annotations_pc])
 
-    pcd.points.extend(new_point)
-    o3d.visualization.draw_geometries([pcd])
 
